@@ -1,0 +1,211 @@
+/* ===== 栏目管理页 ===== */
+.cat-loading {
+  padding: 60px;
+  text-align: center;
+  color: #999;
+}
+
+.cat-page {
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cat-toolbar {
+  background: #fff;
+  padding: 16px 20px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cat-toolbar-title {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.cat-toolbar-total {
+  font-size: 13px;
+  color: #888;
+}
+
+.cat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.cat-card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  overflow: hidden;
+  transition: box-shadow 0.15s;
+}
+
+.cat-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.cat-card-top {
+  background: #3182ce;
+  color: #fff;
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cat-card-name {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.cat-card-id {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.cat-card-body {
+  padding: 14px 18px;
+}
+
+.cat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.cat-label {
+  color: #888;
+}
+
+.cat-code {
+  background: #f5f5f5;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: monospace;
+  color: #555;
+}
+
+/* 按钮 */
+.cat-btn {
+  padding: 8px 18px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.cat-btn:hover { background: #f5f5f5; }
+
+.cat-btn--primary {
+  background: #3182ce;
+  color: #fff;
+  border-color: #3182ce;
+}
+
+.cat-btn--primary:hover { background: #2c5282; }
+
+.cat-btn--primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.cat-btn-small {
+  padding: 4px 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.cat-btn-small:hover:not(:disabled) { background: #f0f0f0; }
+.cat-btn-small:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.cat-btn-small--edit { border-color: #3182ce; color: #3182ce; }
+.cat-btn-small--edit:hover:not(:disabled) { background: #ebf4ff; }
+
+.cat-btn-small--delete { border-color: #e53e3e; color: #e53e3e; }
+.cat-btn-small--delete:hover:not(:disabled) { background: #fff5f5; }
+
+.cat-card-actions {
+  display: flex;
+  gap: 6px;
+  padding: 8px 18px 14px;
+}
+
+/* 表单弹窗 */
+.cat-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.cat-form-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  width: 420px;
+  max-width: 90vw;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+}
+
+.cat-form-title {
+  margin: 0 0 18px;
+  font-size: 16px;
+  color: #333;
+}
+
+.cat-form-field {
+  margin-bottom: 14px;
+}
+
+.cat-form-field label {
+  display: block;
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.cat-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.cat-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  box-sizing: border-box;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.cat-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}

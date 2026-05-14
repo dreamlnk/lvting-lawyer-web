@@ -1,0 +1,270 @@
+/* ===== 整体布局 ===== */
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f0f2f5;
+}
+
+/* ===== 侧边栏 ===== */
+.sidebar {
+  width: 230px;
+  background: #1a1a2e;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 100;
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-logo-icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.sidebar-logo-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.sidebar-logo-sub {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 2px;
+}
+
+/* 导航 */
+.sidebar-nav {
+  flex: 1;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.65);
+  text-decoration: none;
+  font-size: 14px;
+  transition: background 0.15s, color 0.15s;
+  cursor: pointer;
+}
+
+.sidebar-nav-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.sidebar-nav-item--active {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-weight: 500;
+}
+
+.sidebar-nav-icon {
+  font-size: 15px;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* 退出按钮 */
+.sidebar-bottom {
+  padding: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-logout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.65);
+  background: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  box-sizing: border-box;
+}
+
+.sidebar-logout:hover,
+.sidebar-logout--hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* ===== 主内容区 ===== */
+.main-area {
+  flex: 1;
+  margin-left: 230px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* 顶部栏 */
+.top-bar {
+  background: #fff;
+  padding: 0 24px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.breadcrumb {
+  font-size: 13px;
+  color: #666;
+  display: flex;
+  align-items: center;
+}
+
+.breadcrumb-link {
+  color: #3182ce;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb-current {
+  color: #333;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.breadcrumb-sep {
+  color: #ccc;
+  margin: 0 6px;
+}
+
+.path-badge {
+  font-size: 11px;
+  color: #999;
+  background: #f5f5f5;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-family: monospace;
+  flex-shrink: 0;
+}
+
+/* 顶栏内的栏目导航（仅文章管理页显示） */
+.cat-nav-inline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0 8px;
+  flex: 1;
+  justify-content: center;
+}
+
+/* 页面文件路径（标题旁边的灰色小字） */
+.page-file-path {
+  font-size: 11px;
+  color: #aaa;
+  font-weight: 400;
+  font-family: monospace;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+.cat-nav-inline::-webkit-scrollbar { display: none; }
+
+.cat-nav-label {
+  color: #999;
+  white-space: nowrap;
+  margin-right: 2px;
+}
+
+/* 顶栏退出按钮 */
+.topbar-logout {
+  padding: 6px 14px;
+  border: 1px solid #e53e3e;
+  border-radius: 6px;
+  background: #fff;
+  color: #e53e3e;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.topbar-logout:hover {
+  background: #e53e3e;
+  color: #fff;
+}
+
+.cat-nav-link {
+  color: #3182ce;
+  text-decoration: none;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.cat-nav-link:hover {
+  background: #edf2f7;
+  color: #1a5a9c;
+}
+
+.cat-nav-link--active {
+  background: #3182ce;
+  color: #fff;
+}
+
+.cat-nav-link--active:hover {
+  background: #2c5282;
+}
+
+.cat-nav-count {
+  font-size: 11px;
+  margin-left: 3px;
+  opacity: 0.65;
+}
+
+/* 内容区 */
+.page-content {
+  flex: 1;
+  padding: 20px;
+  max-width: 1200px;
+  width: 100%;
+  box-sizing: border-box;
+}

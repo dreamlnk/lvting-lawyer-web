@@ -1,0 +1,147 @@
+/* ===== 仪表盘 ===== */
+.dash-loading {
+  padding: 80px;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+}
+
+.dash-page {
+  max-width: 1000px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 欢迎横幅 */
+.dash-banner {
+  background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
+  color: #fff;
+  padding: 32px 36px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(49, 130, 206, 0.25);
+}
+
+.dash-banner-title {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.dash-banner-sub {
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.85;
+  line-height: 1.6;
+}
+
+/* 统计卡片 */
+.dash-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.dash-stat-card {
+  background: #fff;
+  padding: 24px 28px;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  transition: transform 0.15s, box-shadow 0.15s;
+  border-left: 4px solid #3182ce;
+}
+
+.dash-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dash-stat--blue  { border-left-color: #3182ce; }
+.dash-stat--green { border-left-color: #38a169; }
+.dash-stat--orange { border-left-color: #dd6b20; }
+
+.dash-stat-num {
+  font-size: 36px;
+  font-weight: 700;
+  color: #1a202c;
+  line-height: 1.2;
+}
+
+.dash-stat-label {
+  font-size: 13px;
+  color: #718096;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+/* 区块 */
+.dash-section {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px 28px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.dash-section-title {
+  margin: 0 0 18px 0;
+  font-size: 16px;
+  color: #1a202c;
+  font-weight: 600;
+}
+
+/* 快捷操作 */
+.dash-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.dash-action-card {
+  display: block;
+  padding: 18px 20px;
+  background: #f7fafc;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #2d3748;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.dash-action-card:hover {
+  background: #edf2f7;
+  border-color: #3182ce;
+}
+
+/* 项目信息 */
+.dash-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.dash-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 11px 16px;
+  background: #f7fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.dash-info-label {
+  font-size: 13px;
+  color: #718096;
+}
+
+.dash-info-val {
+  font-size: 13px;
+  color: #2d3748;
+  font-weight: 500;
+}
