@@ -71,6 +71,7 @@
   font-size: 14px;
   transition: background 0.15s, color 0.15s;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .sidebar-nav-item:hover {
@@ -181,7 +182,6 @@
   flex-shrink: 0;
 }
 
-/* 顶栏内的栏目导航（仅文章管理页显示） */
 .cat-nav-inline {
   display: flex;
   align-items: center;
@@ -194,7 +194,6 @@
   justify-content: center;
 }
 
-/* 页面文件路径（标题旁边的灰色小字） */
 .page-file-path {
   font-size: 11px;
   color: #aaa;
@@ -212,7 +211,6 @@
   margin-right: 2px;
 }
 
-/* 顶栏退出按钮 */
 .topbar-logout {
   padding: 6px 14px;
   border: 1px solid #e53e3e;
@@ -267,4 +265,40 @@
   max-width: 1200px;
   width: 100%;
   box-sizing: border-box;
+}
+
+/* ===== 手机端适配 ===== */
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 4px 8px;
+  color: #333;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-menu-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 99;
+}
+
+@media (max-width: 768px) {
+  .mobile-menu-btn { display: block; }
+  .sidebar { display: none !important; }
+  .main-area { margin-left: 0; }
+  .page-content { padding: 12px; }
+
+  .sidebar.mobile-show {
+    display: flex !important;
+    position: fixed;
+    z-index: 101;
+    width: 260px;
+  }
+
+  .mobile-menu-overlay.show { display: block; }
 }

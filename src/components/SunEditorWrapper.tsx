@@ -9,6 +9,7 @@ const EDITOR_CSS_HREF = "/api/css/suneditor";
 function formatHtml(html: string): string {
   if (!html) return html;
   let c = html;
+  c = c.replace(/\[Unsupported Image\]/gi, '');
   c = c.replace(/[​‌‍﻿　]/g, '');
   c = c.replace(/(?:<br\s*\/?>\s*){2,}/gi, '</p><p>');
   c = c.replace(/<br\s*\/?>/gi, '</p><p>');

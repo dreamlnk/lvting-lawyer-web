@@ -88,6 +88,7 @@ async function downloadSingleImage(url: string): Promise<{ original: string; loc
 /** 清理 HTML 中的图片干扰：去掉 figure 包装、style 属性、data-* 属性 */
 function cleanImageHtml(html: string): string {
   let c = html;
+  c = c.replace(/\[Unsupported Image\]/gi, '');
   c = c.replace(/<figure[^>]*>([\s\S]*?)<\/figure>/gi, '$1');
   c = c.replace(/<img\s+([^>]*?)>/gi, (_m: string, attrs: string) => {
     let cleaned = attrs;

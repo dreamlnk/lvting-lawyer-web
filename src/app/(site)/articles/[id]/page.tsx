@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { getFullArticle, getLatestArticles } from '@/lib/db';
+import ViewCounter from '@/components/ViewCounter';
+import '../article-themes.css';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -109,14 +111,7 @@ export default async function ArticleDetailPage({ params }: PageProps) {
               </p>
             )}
             <div
-              className="prose prose-lg max-w-none
-                prose-headings:text-gray-900 prose-headings:font-bold
-                prose-a:text-blue-700 prose-a:no-underline hover:prose-a:underline
-                prose-img:rounded-lg prose-img:mx-auto
-                prose-blockquote:border-blue-900 prose-blockquote:bg-blue-50 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r-lg
-                prose-strong:text-gray-900
-                prose-code:bg-gray-100 prose-code:px-1.5 prose-code:rounded
-                prose-pre:bg-gray-900 prose-pre:text-gray-100"
+              className="article-body theme-classic"
               dangerouslySetInnerHTML={{ __html: article.content }}
             />
           </div>
@@ -157,7 +152,10 @@ export default async function ArticleDetailPage({ params }: PageProps) {
           </div>
         )}
 
-        {/* 返回 */}
+        {/* 浏览计数 */}
+      <ViewCounter articleId={articleId} />
+
+      {/* 返回 */}
         <div className="mt-8 text-center">
           <Link href="/" className="text-gray-500 hover:text-blue-900 text-sm transition-colors">
             ← 返回首页

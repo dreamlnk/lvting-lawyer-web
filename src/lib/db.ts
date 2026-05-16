@@ -65,6 +65,7 @@ function ensureSchema() {
   )`);
   db.run("CREATE INDEX IF NOT EXISTS idx_articles_category ON articles(category_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_articles_status_date ON articles(status, published_at)");
+  try { db.run("ALTER TABLE articles ADD COLUMN theme TEXT DEFAULT 'classic'"); } catch (e) {}
   db.run("CREATE INDEX IF NOT EXISTS idx_articles_old_id ON articles(old_id)");
   db.run(`CREATE TABLE IF NOT EXISTS site_config (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -245,19 +246,21 @@ interface GetArticlesOpts {
 
 export async function getArticles(opts: GetArticlesOpts = {}) {
   await getDb();
-  const { categoryId, page = 1, pageSize = 20, keyword, status = "published" } = opts;
+  const { categoryId, page = 1, pageSize = 20, keyword, status } = opts;
 
-  const where: string[] = ["a.status = ?"];
-  const params: unknown[] = [status];
+  const where: string[] = [];
+  const params: unknown[] = [];
+
+  if (status) { where.push("a.status = ?"); params.push(status); }
 
   if (categoryId) { where.push("a.category_id = ?"); params.push(categoryId); }
   if (keyword) { where.push("(a.title LIKE ? OR a.summary LIKE ?)"); params.push(`%${keyword}%`, `%${keyword}%`); }
 
-  const whereClause = where.join(" AND ");
+  const whereClause = where.length > 0 ? " WHERE " + where.join(" AND ") : "";
   const offset = (page - 1) * pageSize;
 
   const countRow = dbGet<{ total: number }>(
-    `SELECT COUNT(*) as total FROM articles a WHERE ${whereClause}`, params
+    `SELECT COUNT(*) as total FROM articles a${whereClause}`, params
   );
 
   const rows = dbAll<any>(
@@ -266,8 +269,7 @@ export async function getArticles(opts: GetArticlesOpts = {}) {
             a.is_top, a.status, a.published_at,
             c.id as cat_id, c.name as cat_name, c.slug as cat_slug
      FROM articles a
-     LEFT JOIN categories c ON a.category_id = c.id
-     WHERE ${whereClause}
+     LEFT JOIN categories c ON a.category_id = c.id${whereClause}
      ORDER BY a.is_top DESC, a.published_at DESC
      LIMIT ? OFFSET ?`,
     [...params, pageSize, offset]
@@ -394,8 +396,8 @@ export async function getArticlesByIds(ids: number[]) {
 
 export async function incrementViewCount(id: number): Promise<void> {
   await getDb();
+  // 只更新内存，不保存到文件（避免频繁写入触发的重建）
   _db!.run("UPDATE articles SET view_count = view_count + 1 WHERE id = ?", [id]);
-  saveDb();
 }
 
 // ============ 文章写操作 ============
@@ -477,4 +479,4 @@ export function mapCategory(r: DbCategory) {
   return { id: r.id, name: r.name, slug: r.slug, parentId: null, description: r.description, coverImage: null };
 }
 
-export { saveDb };
+export { getDb, saveDb };

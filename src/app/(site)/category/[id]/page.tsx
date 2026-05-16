@@ -37,7 +37,7 @@ export default async function CategoryPage({
   const catRow = await resolveCategory(id);
   if (!catRow) notFound();
 
-  const articlesData = await getArticles({ categoryId: catRow.id, page: 1, pageSize: 20 });
+  const articlesData = await getArticles({ categoryId: catRow.id, page: 1, pageSize: 20, status: "published" });
   const articles = articlesData.articles;
 
   return (

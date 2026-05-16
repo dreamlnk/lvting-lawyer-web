@@ -18,7 +18,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
 
   const [cats, result] = await Promise.all([
     getCategoriesWithCounts(),
-    getArticles({ page: currentPage, pageSize: PAGE_SIZE, categoryId }),
+    getArticles({ page: currentPage, pageSize: PAGE_SIZE, categoryId, status: "published" }),
   ]);
 
   const total = result.total;

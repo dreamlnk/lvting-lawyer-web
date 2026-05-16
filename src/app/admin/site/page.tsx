@@ -69,7 +69,7 @@ export default function SiteSettingsPage() {
         display:"flex", justifyContent:"space-between", alignItems:"center",
       }}>
         <h2 style={{margin:0,fontSize:16,color:"#333"}}>
-          网站设置 <span className="page-file-path" style={{fontSize:11,color:"#aaa",fontFamily:"monospace",fontWeight:400,marginLeft:8}}>src/app/admin/site/page.tsx</span>
+          独立页管理 <span className="page-file-path" style={{fontSize:11,color:"#aaa",fontFamily:"monospace",fontWeight:400,marginLeft:8}}>src/app/admin/site/page.tsx</span>
         </h2>
       </div>
 

@@ -9,7 +9,8 @@ const menu = [
   { href: "/admin",          label: "仪表盘",   icon: "📊" },
   { href: "/admin/articles",  label: "文章管理", icon: "📝" },
   { href: "/admin/categories", label: "栏目管理", icon: "📁" },
-  { href: "/admin/site",      label: "网站设置", icon: "⚙️" },
+  { href: "/admin/ai-writer", label: "AI 写作",   icon: "🤖" },
+  { href: "/admin/site",      label: "独立页管理", icon: "📄" },
   { href: "/",                label: "查看网站", icon: "📰", external: true },
 ];
 
@@ -32,6 +33,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isArticlesPage = mounted && pathname?.startsWith("/admin/articles") && pathname !== "/admin/articles/new";
 
   useEffect(() => { setMounted(true); }, []);
@@ -41,10 +43,15 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     }
   }, [isArticlesPage]);
 
+  const closeMobile = () => setMobileMenuOpen(false);
+
   return (
     <div className="admin-layout">
+      {/* 移动端遮罩 */}
+      {mobileMenuOpen && <div className="mobile-menu-overlay show" onClick={closeMobile} />}
+
       {/* 侧边栏 */}
-      <aside className="sidebar">
+      <aside className={"sidebar" + (mobileMenuOpen ? " mobile-show" : "")}>
         <div className="sidebar-logo">
           <span className="sidebar-logo-icon">⚖</span>
           <div>
@@ -69,6 +76,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                   "sidebar-nav-item" +
                   (active ? " sidebar-nav-item--active" : "")
                 }
+                onClick={closeMobile}
                 onMouseEnter={() => setHovered(item.href)}
                 onMouseLeave={() => setHovered(null)}
               >
@@ -99,46 +107,34 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
       {/* 主内容区 */}
       <div className="main-area">
-        <header className="top-bar">
-          <span className="breadcrumb">
-            {mounted && (
-              <>
-                <Link href="/admin" className="breadcrumb-link">仪表盘</Link>
-                {pathname !== "/admin" && (
-                  <>
-                    <span className="breadcrumb-sep"> / </span>
-                    <span className="breadcrumb-current">
-                      {pathname?.startsWith("/admin/articles")
-                        ? "文章管理"
-                        : pathname?.startsWith("/admin/categories")
-                        ? "栏目管理"
-                        : ""}
-                    </span>
-                  </>
-                )}
-              </>
-            )}
-          </span>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: "auto" }}>
-            {/* 文章管理页的栏目导航（固定顶端，不随页面滚动） */}
-            {isArticlesPage && categories.length > 0 && (
-              <span className="cat-nav-inline">
-                {categories.filter(c => !STANDALONE_SLUGS.includes(c.slug)).map(c => (
-                  <Link
-                    key={c.id}
-                    href={`/admin/articles?categoryId=${c.id}`}
-                    className={"cat-nav-link" + (currentCatId === String(c.id) ? " cat-nav-link--active" : "")}
-                  >{c.name}<span className="cat-nav-count">{c.article_count ?? 0}</span></Link>
-                ))}
-              </span>
-            )}
-            <form action="/api/admin/logout" method="POST" style={{ margin: 0, padding: 0 }}>
-              <button type="submit" className="topbar-logout">退出</button>
-            </form>
+        {/* 顶部栏 */}
+        <div className="top-bar">
+          <div className="breadcrumb">
+            <button className="mobile-menu-btn" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+              ☰
+            </button>
           </div>
-        </header>
+          {isArticlesPage && categories.length > 0 && (
+            <div className="cat-nav-inline">
+              <span className="cat-nav-label">栏目：</span>
+              <a href="/admin/articles" className={"cat-nav-link" + (!currentCatId ? " cat-nav-link--active" : "")}>全部</a>
+              {categories.filter(c => !STANDALONE_SLUGS.includes(c.slug)).map(c => (
+                <a key={c.id} href={`/admin/articles?categoryId=${c.id}`}
+                  className={"cat-nav-link" + (currentCatId === String(c.id) ? " cat-nav-link--active" : "")}>
+                  {c.name}
+                </a>
+              ))}
+            </div>
+          )}
+          <form action="/api/admin/logout" method="POST" style={{ margin: 0 }}>
+            <button type="submit" className="topbar-logout">退出</button>
+          </form>
+        </div>
 
-        <main className="page-content">{children}</main>
+        {/* 页面内容 */}
+        <div className="page-content">
+          {children}
+        </div>
       </div>
     </div>
   );

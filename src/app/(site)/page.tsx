@@ -27,7 +27,7 @@ export default async function HomePage() {
   // 每个栏目取最新 N 篇文章
   const catArticles = await Promise.all(
     displayCats.map(async (cat) => {
-      const data = await getArticles({ categoryId: cat.id, page: 1, pageSize: PAGE_SIZE });
+      const data = await getArticles({ categoryId: cat.id, page: 1, pageSize: PAGE_SIZE, status: "published" });
       return { cat, articles: data.articles };
     })
   );

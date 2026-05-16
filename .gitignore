@@ -1,13 +1,6 @@
 # dependencies
 /node_modules
 backend/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
 
 # testing
 /coverage
@@ -39,14 +32,34 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# database - 不提交数据库文件
+# database
 *.db
 *.db-journal
 
 # logs
 startup_error.log
 
-# 不提交临时目录
-data/
-gyw/
-publico/
+# 上传的图片（每台服务器自己生成）
+/public/uploads/
+
+# 旧CMS数据目录（已在服务器上，不上传Git）
+/public/d/
+/public/e/
+/public/skin/
+/public/cx/
+/public/fengcai/
+/public/xingshibianhu/
+/public/hunyinjiating/
+/public/jiaotongshigu/
+/public/laodonggongshang/
+/public/fangchan/
+/public/jingjihetong/
+/public/shoufeibiaozhun/
+/public/jj/
+/public/analyze_db.php
+/data/
+/gyw/
+/publico/
+
+# backend（独立部署）
+/backend/

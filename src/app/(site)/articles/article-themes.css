@@ -1,0 +1,87 @@
+/* ===== 文章主题：统一的语义类名，通过父级切换颜色 ===== */
+
+/* --- 基础样式（所有主题通用） --- */
+.article-body { line-height: 1.9; font-size: 16px; color: #333; }
+.article-body p { margin: 0 0 16px 0; }
+.article-body h2 { font-size: 22px; font-weight: 700; margin: 32px 0 16px; padding-bottom: 10px; border-bottom-width: 2px; border-bottom-style: solid; }
+.article-body h3 { font-size: 18px; font-weight: 600; margin: 24px 0 12px; }
+.article-body h4 { font-size: 16px; font-weight: 600; margin: 20px 0 10px; }
+.article-body ul, .article-body ol { margin: 0 0 16px 0; padding-left: 24px; }
+.article-body li { margin-bottom: 6px; }
+.article-body a { text-decoration: underline; }
+.article-body a:hover { text-decoration: none; }
+
+/* 提示框 */
+.article-tip, .article-warning, .article-important {
+  padding: 14px 18px; border-radius: 8px; margin: 20px 0; font-size: 15px;
+  border-left: 4px solid;
+}
+.article-tip::before { content: "💡 提示："; font-weight: 600; }
+.article-warning::before { content: "⚠️ 注意："; font-weight: 600; }
+.article-important::before { content: "📌 要点："; font-weight: 600; }
+
+/* 引用块 */
+.article-body blockquote {
+  margin: 20px 0; padding: 12px 20px; border-radius: 6px;
+  border-left: 4px solid; font-style: normal; font-size: 15px;
+}
+
+/* 卡片 */
+.article-card {
+  padding: 16px 20px; border-radius: 10px; margin: 20px 0;
+  border: 1px solid;
+}
+
+/* 高亮 */
+.article-highlight { font-weight: 600; }
+
+/* 分割线 */
+.article-body hr { margin: 30px 0; border: none; height: 1px; }
+
+/* 步骤列表 */
+.article-step { margin: 16px 0; padding: 12px 16px; border-radius: 8px; }
+.article-step .step-num { display: inline-block; width: 24px; height: 24px; line-height: 24px; text-align: center; border-radius: 50%; font-size: 13px; font-weight: 700; margin-right: 8px; }
+
+/* --- 经典主题（金黑配色） --- */
+.theme-classic .article-body h2 { border-bottom-color: #d69e2e; color: #1a202c; }
+.theme-classic .article-body blockquote { border-left-color: #d69e2e; background: #fffbeb; color: #744210; }
+.theme-classic .article-tip { background: #fffbeb; border-color: #d69e2e; color: #744210; }
+.theme-classic .article-warning { background: #fff5f5; border-color: #e53e3e; color: #9b2c2c; }
+.theme-classic .article-important { background: #ebf8ff; border-color: #3182ce; color: #2a4365; }
+.theme-classic .article-card { background: #f7fafc; border-color: #e2e8f0; }
+.theme-classic .article-body hr { background: #e2e8f0; }
+.theme-classic .article-step { background: #fffbeb; }
+.theme-classic .article-step .step-num { background: #d69e2e; color: #fff; }
+
+/* --- 蓝色主题 --- */
+.theme-blue .article-body h2 { border-bottom-color: #3182ce; color: #2a4365; }
+.theme-blue .article-body blockquote { border-left-color: #3182ce; background: #ebf8ff; color: #2c5282; }
+.theme-blue .article-tip { background: #ebf8ff; border-color: #3182ce; color: #2c5282; }
+.theme-blue .article-warning { background: #fff5f5; border-color: #e53e3e; color: #9b2c2c; }
+.theme-blue .article-important { background: #e6fffa; border-color: #38a169; color: #22543d; }
+.theme-blue .article-card { background: #f7fafc; border-color: #bee3f8; }
+.theme-blue .article-body hr { background: #bee3f8; }
+.theme-blue .article-step { background: #ebf8ff; }
+.theme-blue .article-step .step-num { background: #3182ce; color: #fff; }
+
+/* --- 橙色主题 --- */
+.theme-orange .article-body h2 { border-bottom-color: #dd6b20; color: #7b341e; }
+.theme-orange .article-body blockquote { border-left-color: #dd6b20; background: #fffaf0; color: #7b341e; }
+.theme-orange .article-tip { background: #fffaf0; border-color: #dd6b20; color: #7b341e; }
+.theme-orange .article-warning { background: #fff5f5; border-color: #e53e3e; color: #9b2c2c; }
+.theme-orange .article-important { background: #ebf8ff; border-color: #3182ce; color: #2a4365; }
+.theme-orange .article-card { background: #fffaf0; border-color: #feebc8; }
+.theme-orange .article-body hr { background: #feebc8; }
+.theme-orange .article-step { background: #fffaf0; }
+.theme-orange .article-step .step-num { background: #dd6b20; color: #fff; }
+
+/* --- 灰白主题 --- */
+.theme-gray .article-body h2 { border-bottom-color: #718096; color: #2d3748; }
+.theme-gray .article-body blockquote { border-left-color: #a0aec0; background: #f7fafc; color: #4a5568; }
+.theme-gray .article-tip { background: #f7fafc; border-color: #a0aec0; color: #4a5568; }
+.theme-gray .article-warning { background: #fff5f5; border-color: #e53e3e; color: #9b2c2c; }
+.theme-gray .article-important { background: #f0fff4; border-color: #48bb78; color: #22543d; }
+.theme-gray .article-card { background: #f7fafc; border-color: #e2e8f0; }
+.theme-gray .article-body hr { background: #e2e8f0; }
+.theme-gray .article-step { background: #f7fafc; }
+.theme-gray .article-step .step-num { background: #718096; color: #fff; }
