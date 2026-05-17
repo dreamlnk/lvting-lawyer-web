@@ -39,24 +39,8 @@ next-env.d.ts
 # logs
 startup_error.log
 
-# 上传的图片（每台服务器自己生成）
-/public/uploads/
-
-# 旧CMS数据目录（已在服务器上，不上传Git）
-/public/d/
-/public/e/
-/public/skin/
-/public/cx/
-/public/fengcai/
-/public/xingshibianhu/
-/public/hunyinjiating/
-/public/jiaotongshigu/
-/public/laodonggongshang/
-/public/fangchan/
-/public/jingjihetong/
-/public/shoufeibiaozhun/
-/public/jj/
-/public/analyze_db.php
+# public 目录每台服务器独立，不上传 Git
+/public/
 /data/
 /gyw/
 /publico/
