@@ -37,29 +37,54 @@ export async function POST(req: NextRequest) {
     }
 
     const html = await res.text();
-
-    // 用 Readability 精确提取正文
     const doc = new JSDOM(html, { url });
-    const reader = new Readability(doc.window.document);
-    const article = reader.parse();
-
     let title = "";
     let text = "";
 
+    // 1. Readability 提取（适配标准新闻/博客页面）
+    const reader = new Readability(doc.window.document);
+    const article = reader.parse();
     if (article) {
       title = article.title || "";
       text = stripHtml(article.textContent || "");
-    } else {
-      // 兜底：去掉常见非正文区域后转纯文本
-      const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
-      title = titleMatch ? titleMatch[1].trim() : "";
-      text = html
+    }
+
+    // 2. Readability 提取太短，尝试常见内容容器（适配微信、知乎等特殊结构）
+    if (text.length < 200) {
+      const contentSelectors = [
+        "#js_content",                          // 微信公众号
+        ".rich_media_content",                  // 微信备选
+        ".RichText",                            // 知乎
+        ".Post-RichText",                       // 知乎专栏
+        "article",                              // 通用 article 标签
+        "[role=main]",                          // ARIA main
+        ".article-content",                     // 头条/通用
+        ".post-content", ".entry-content",      // WordPress/博客
+        ".news-content", ".article-body",       // 新闻站
+        ".content", "#content",                 // 通用
+      ];
+      for (const sel of contentSelectors) {
+        const el = doc.window.document.querySelector(sel);
+        if (el) {
+          const t = stripHtml(el.textContent || "");
+          if (t.length > text.length) text = t;
+          if (text.length >= 500) break;
+        }
+      }
+    }
+
+    // 3. 仍未提取到有效内容，全页兜底
+    if (text.length < 100) {
+      if (!title) {
+        const tm = html.match(/<title[^>]*>([^<]*)<\/title>/i);
+        title = tm ? tm[1].trim() : "";
+      }
+      text = stripHtml(html
         .replace(/<script[\s\S]*?<\/script>/gi, "")
         .replace(/<style[\s\S]*?<\/style>/gi, "")
         .replace(/<nav[\s\S]*?<\/nav>/gi, "")
         .replace(/<footer[\s\S]*?<\/footer>/gi, "")
-        .replace(/<header[\s\S]*?<\/header>/gi, "");
-      text = stripHtml(text);
+        .replace(/<header[\s\S]*?<\/header>/gi, ""));
     }
 
     const MAX_LEN = 8000;
