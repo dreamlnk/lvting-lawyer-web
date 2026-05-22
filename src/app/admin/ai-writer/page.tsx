@@ -92,8 +92,10 @@ export default function AiWriterPage() {
       const fr = await fetch("/api/ai/fetch-url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) });
       const fd = await fr.json();
       if (!fd.ok) { setAutoGenerating(""); setFetchStatus("❌ 抓取失败: " + (fd.error || "")); return; }
-      const prefix = content.trim() ? content + "\n\n" : "";
-      setContent(prefix + "【以下内容从链接抓取】\n" + fd.content);
+      // 替换旧的抓取内容，不累积
+      const prev = content.replace(/【以下内容从链接抓取】\n[\s\S]*$/, "").trim();
+      const newBlock = (prev ? prev + "\n\n" : "") + "【以下内容从链接抓取】\n" + fd.content;
+      setContent(newBlock);
       setFetchStatus("✅ 已抓取 " + fd.content.length + " 字");
       if (!topic.trim() && fd.title) setTopic(fd.title);
       await genAll(fd.title || "", fd.content);
@@ -323,8 +325,8 @@ export default function AiWriterPage() {
                 const r = await fetch("/api/ai/fetch-url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: u }) });
                 const d = await r.json();
                 if (d.ok) {
-                  const p = content.trim() ? content + "\n\n" : "";
-                  setContent(p + "【以下内容从链接抓取】\n" + d.content);
+                  const prev = content.replace(/【以下内容从链接抓取】\n[\s\S]*$/, "").trim();
+                  setContent((prev ? prev + "\n\n" : "") + "【以下内容从链接抓取】\n" + d.content);
                   if (!topic.trim() && d.title) setTopic(d.title);
                   setFetchStatus("✅ 已抓取 " + d.content.length + " 字");
                   await genAll(d.title || "", d.content);
