@@ -15,10 +15,14 @@ function extractKeyPhrases(text: string): string {
 
 // 判断结果是否都是词典释义（说明 Bing 锚错了单字）
 function looksLikeDictionary(title: string, url: string): boolean {
-  const dictDomains = ["baike.baidu.com", "zdic.net", "hanyuguoxue.com", "gushici.net", "hancibao.com", "zidian.", "qianp.com"];
+  const dictDomains = ["baike.baidu.com", "zdic.net", "hanyuguoxue.com", "gushici.net", "hancibao.com", "zidian.", "qianp.com", "dict."];
   if (dictDomains.some(d => url.includes(d))) return true;
-  if (/^[一二三四五六七八九十百千万亿]$/.test(title)) return true;
-  if (/[（(].{0,4}汉语.{0,4}[)）]/.test(title)) return true;
+  // 标题带词典/字典/百科特征
+  if (/的意思|的读音|的拼音|的解释|的笔顺|怎么读|怎么念|怎么讲/.test(title)) return true;
+  if (/字典|词典|汉典|百科|国学|辞海|辞源/.test(title)) return true;
+  // 标题是单字或单字+_
+  if (/^[一二三四五六七八九十百千万亿](_|，|：)/.test(title)) return true;
+  if (/^.\s*(汉语|词语|汉字)/.test(title)) return true;
   return false;
 }
 
@@ -32,13 +36,11 @@ export async function POST(req: NextRequest) {
     const results: { title: string; url: string; snippet: string }[] = [];
     const seenUrls = new Set<string>();
 
-    // 搜索 Bing，收集结果的同时检测是否为词典结果
-    async function bingSearch(query: string): Promise<number> {
-      let count = 0;
-      if (results.length >= 8) return 0;
+    // 搜索 Bing
+    async function bingSearch(query: string, extraParams = ""): Promise<void> {
       try {
         const res = await fetch(
-          `https://cn.bing.com/search?q=${encodeURIComponent(query)}`,
+          `https://cn.bing.com/search?q=${encodeURIComponent(query)}${extraParams}`,
           {
             headers: {
               "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -47,7 +49,7 @@ export async function POST(req: NextRequest) {
             signal: AbortSignal.timeout(10000),
           }
         );
-        if (!res.ok) return 0;
+        if (!res.ok) return;
         const html = await res.text();
         const itemRegex = /<li class="b_algo"[^>]*>([\s\S]*?)<\/li>/gi;
         let match;
@@ -60,7 +62,6 @@ export async function POST(req: NextRequest) {
             const url = h2Match[1];
             const title = h2Match[2].replace(/<[^>]+>/g, "").trim();
             if (url.includes("go.microsoft.com") || seenUrls.has(url)) continue;
-            // 词典结果不计入正常结果
             if (looksLikeDictionary(title, url)) continue;
             seenUrls.add(url);
             results.push({
@@ -68,29 +69,23 @@ export async function POST(req: NextRequest) {
               url,
               snippet: s ? s[1].replace(/<[^>]+>/g, "").trim() : "",
             });
-            count++;
           }
           if (results.length >= 8) break;
         }
       } catch {}
-      return count;
     }
 
-    // 1. 原始查询
-    await bingSearch(keyword.trim());
+    // 并发搜索：原始词 + 去问词版 + 浏览器版 + 长词组版
+    const qwords = /[吗呢吧啊哦呀]|[能否]不能|[可好]不可以|[会要]不要|是不是|有没有|怎么办|怎么做|怎样|如何|怎么|什么|为啥|为何/g;
+    const cleaned = keyword.trim().replace(qwords, " ").replace(/[？?！!，,。、：:\s]+/g, " ").trim();
+    const phrases = extractKeyPhrases(keyword.trim());
 
-    // 2. 如果结果少于 3 条，尝试去问词版本
-    if (results.length < 3) {
-      const qwords = /[吗呢吧啊哦呀]|[能否]不能|[可好]不可以|[会要]不要|是不是|有没有|怎么办|怎么做|怎样|如何|怎么|什么|为啥|为何/g;
-      const cleaned = keyword.trim().replace(qwords, " ").replace(/[？?！!，,。、：:\s]+/g, " ").trim();
-      if (cleaned !== keyword.trim()) await bingSearch(cleaned);
-    }
+    const tasks = [bingSearch(keyword.trim())];
+    if (cleaned !== keyword.trim()) tasks.push(bingSearch(cleaned));
+    tasks.push(bingSearch(keyword.trim(), "&pc=CNNDDB&adppc=EDGESSB"));
+    if (phrases) tasks.push(bingSearch(phrases));
 
-    // 3. 仍少于 3 条，用长词组兜底
-    if (results.length < 3) {
-      const phrases = extractKeyPhrases(keyword.trim());
-      if (phrases) await bingSearch(phrases);
-    }
+    await Promise.all(tasks);
 
     if (results.length === 0) {
       return NextResponse.json({ ok: false, error: "未找到相关结果，请换个关键词试试" });
