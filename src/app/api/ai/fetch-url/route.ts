@@ -1,4 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { JSDOM } from "jsdom";
+import { Readability } from "@mozilla/readability";
+
+function stripHtml(html: string) {
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,29 +38,36 @@ export async function POST(req: NextRequest) {
 
     const html = await res.text();
 
-    let text = html
-      .replace(/<script[\s\S]*?<\/script>/gi, "")
-      .replace(/<style[\s\S]*?<\/style>/gi, "")
-      .replace(/<nav[\s\S]*?<\/nav>/gi, "")
-      .replace(/<footer[\s\S]*?<\/footer>/gi, "")
-      .replace(/<header[\s\S]*?<\/header>/gi, "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/&nbsp;/g, " ")
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/\s+/g, " ")
-      .trim();
+    // 用 Readability 精确提取正文
+    const doc = new JSDOM(html, { url });
+    const reader = new Readability(doc.window.document);
+    const article = reader.parse();
+
+    let title = "";
+    let text = "";
+
+    if (article) {
+      title = article.title || "";
+      text = stripHtml(article.textContent || "");
+    } else {
+      // 兜底：去掉常见非正文区域后转纯文本
+      const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
+      title = titleMatch ? titleMatch[1].trim() : "";
+      text = html
+        .replace(/<script[\s\S]*?<\/script>/gi, "")
+        .replace(/<style[\s\S]*?<\/style>/gi, "")
+        .replace(/<nav[\s\S]*?<\/nav>/gi, "")
+        .replace(/<footer[\s\S]*?<\/footer>/gi, "")
+        .replace(/<header[\s\S]*?<\/header>/gi, "");
+      text = stripHtml(text);
+    }
 
     const MAX_LEN = 8000;
     if (text.length > MAX_LEN) {
       text = text.substring(0, MAX_LEN) + "...（内容过长，已截断）";
     }
 
-    const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
-    const pageTitle = titleMatch ? titleMatch[1].trim() : "";
-
-    return NextResponse.json({ ok: true, title: pageTitle, content: text, url });
+    return NextResponse.json({ ok: true, title, content: text, url });
   } catch (err: any) {
     console.error("[/api/ai/fetch-url]", err);
     if (err.name === "AbortError") {

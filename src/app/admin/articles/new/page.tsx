@@ -29,6 +29,29 @@ export default function NewArticlePage() {
     status: "published",
   });
   const [saving, setSaving] = useState(false);
+  const [checkingAI, setCheckingAI] = useState(false);
+  const [checkingPlag, setCheckingPlag] = useState(false);
+  const [detection, setDetection] = useState<{ aiScore: number; aiLevel: string; aiDimensions: any[]; aiMarkers: string[]; plagScore: number; plagLevel: string; plagMatches: any[]; wordCount: number }>({ aiScore: 0, aiLevel: "", aiDimensions: [], aiMarkers: [], plagScore: 0, plagLevel: "", plagMatches: [], wordCount: 0 });
+
+  const checkAI = async () => {
+    if (!form.content) return;
+    setCheckingAI(true);
+    try {
+      const res = await fetch("/api/ai/check-originality", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: form.title, content: form.content }) });
+      const d = await res.json();
+      if (d.ok) setDetection(prev => ({ ...prev, aiScore: d.aiDetection?.aiScore ?? 0, aiLevel: d.aiDetection?.level ?? "", aiDimensions: d.aiDetection?.dimensions ?? [], aiMarkers: d.aiDetection?.markers ?? [], wordCount: d.wordCount }));
+    } catch {} finally { setCheckingAI(false); }
+  };
+
+  const checkPlag = async () => {
+    if (!form.content) return;
+    setCheckingPlag(true);
+    try {
+      const res = await fetch("/api/ai/check-originality", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: form.title, content: form.content }) });
+      const d = await res.json();
+      if (d.ok) setDetection(prev => ({ ...prev, plagScore: d.score, plagLevel: d.level, plagMatches: d.contentCheck?.matches ?? [], wordCount: d.wordCount }));
+    } catch {} finally { setCheckingPlag(false); }
+  };
 
   useEffect(() => {
     checkAuth();
@@ -161,6 +184,40 @@ export default function NewArticlePage() {
               value={form.content}
               onEditorChange={c => setForm(f => ({ ...f, content: c }))}
             />
+          </div>
+
+          {/* 检测结果 */}
+          <div style={{ background: "#fafafa", borderRadius: 8, padding: 16, border: "1px solid #eee" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap" as const }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 13, color: "#555", fontWeight: 500 }}>AI化程度</span>
+                <span style={{ fontSize: 18, fontWeight: 700, color: detection.aiScore <= 50 ? "#2e7d32" : detection.aiScore <= 80 ? "#e65100" : "#c62828" }}>{detection.aiScore}%</span>
+                {detection.aiScore > 0 && (
+                  <span style={{ fontSize: 11, padding: "1px 6px", borderRadius: 8, background: detection.aiScore <= 50 ? "#e6f9e6" : detection.aiScore <= 80 ? "#fff3e0" : "#fde8e8", color: detection.aiScore <= 50 ? "#2e7d32" : detection.aiScore <= 80 ? "#e65100" : "#c62828" }}>{detection.aiScore <= 50 ? "偏人工" : detection.aiScore <= 80 ? "偏AI" : "AI感强"}</span>
+                )}
+                <button type="button" onClick={checkAI} disabled={checkingAI || !form.content}
+                  style={{ fontSize: 11, color: checkingAI ? "#bbb" : "#805ad5", background: "#f0f0f0", border: "none", padding: "2px 6px", borderRadius: 4, cursor: checkingAI ? "wait" : "pointer", fontWeight: 500 }}>
+                  {checkingAI ? "⏳" : "AI检测"}
+                </button>
+              </div>
+              <div style={{ width: 1, height: 20, background: "#eee", flexShrink: 0 }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 13, color: "#555", fontWeight: 500 }}>重复度</span>
+                <span style={{ fontSize: 18, fontWeight: 700, color: detection.plagScore >= 80 ? "#2e7d32" : detection.plagScore >= 50 ? "#e65100" : detection.plagScore === 0 ? "#999" : "#c62828" }}>{detection.plagScore > 0 ? 100 - detection.plagScore : 0}%</span>
+                {detection.plagScore > 0 && (
+                  <span style={{ fontSize: 11, padding: "1px 6px", borderRadius: 8, background: detection.plagScore >= 80 ? "#e6f9e6" : detection.plagScore >= 50 ? "#fff3e0" : "#fde8e8", color: detection.plagScore >= 80 ? "#2e7d32" : detection.plagScore >= 50 ? "#e65100" : "#c62828" }}>{detection.plagScore >= 80 ? "原创" : detection.plagScore >= 50 ? "部分相似" : "重复较多"}</span>
+                )}
+                <button type="button" onClick={checkPlag} disabled={checkingPlag || !form.content}
+                  style={{ fontSize: 11, color: checkingPlag ? "#bbb" : "#805ad5", background: "#f0f0f0", border: "none", padding: "2px 6px", borderRadius: 4, cursor: checkingPlag ? "wait" : "pointer", fontWeight: 500 }}>
+                  {checkingPlag ? "⏳" : "查重"}
+                </button>
+              </div>
+              <div style={{ width: 1, height: 20, background: "#eee", flexShrink: 0 }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 13, color: "#555", fontWeight: 500 }}>文章字数</span>
+                <span style={{ fontSize: 16, fontWeight: 600, color: "#333" }}>{detection.wordCount || (form.content ? form.content.replace(/<[^>]+>/g, "").replace(/\s+/g, "").length : 0)}字</span>
+              </div>
+            </div>
           </div>
 
           <div style={styles.actions}>

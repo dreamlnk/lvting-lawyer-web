@@ -10,6 +10,7 @@ const menu = [
   { href: "/admin/articles",  label: "文章管理", icon: "📝" },
   { href: "/admin/categories", label: "栏目管理", icon: "📁" },
   { href: "/admin/ai-writer", label: "AI 写作",   icon: "🤖" },
+  { href: "/admin/ai-settings", label: "AI 设置",   icon: "⚙️" },
   { href: "/admin/site",      label: "独立页管理", icon: "📄" },
   { href: "/",                label: "查看网站", icon: "📰", external: true },
 ];

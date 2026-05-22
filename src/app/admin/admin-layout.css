@@ -1,3 +1,9 @@
+html, body {
+  overflow: auto !important;
+  position: static !important;
+  height: auto !important;
+}
+
 /* ===== 整体布局 ===== */
 .admin-layout {
   display: flex;
@@ -50,7 +56,6 @@
   margin-top: 2px;
 }
 
-/* 导航 */
 .sidebar-nav {
   flex: 1;
   padding: 8px;
@@ -92,7 +97,6 @@
   flex-shrink: 0;
 }
 
-/* 退出按钮 */
 .sidebar-bottom {
   padding: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -127,9 +131,9 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-width: 0;
 }
 
-/* 顶部栏 */
 .top-bar {
   background: #fff;
   padding: 0 24px;
@@ -258,16 +262,41 @@
   opacity: 0.65;
 }
 
-/* 内容区 */
 .page-content {
   flex: 1;
   padding: 20px;
   max-width: 1200px;
   width: 100%;
   box-sizing: border-box;
+  min-width: 0;
 }
 
-/* ===== 手机端适配 ===== */
+/* AI 写作结果内容约束 —— 防止生成内容撑破页面 */
+.ai-result-content,
+.ai-result-content * {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+.ai-result-content {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.ai-result-content img,
+.ai-result-content video,
+.ai-result-content iframe {
+  height: auto !important;
+}
+.ai-result-content table {
+  display: block;
+  overflow-x: auto;
+}
+.ai-result-content pre,
+.ai-result-content code {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* 手机端 */
 .mobile-menu-btn {
   display: none;
   background: none;
@@ -277,6 +306,7 @@
   padding: 4px 8px;
   color: #333;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .mobile-menu-overlay {
@@ -297,7 +327,6 @@
     display: flex !important;
     position: fixed;
     z-index: 101;
-    width: 260px;
   }
 
   .mobile-menu-overlay.show { display: block; }

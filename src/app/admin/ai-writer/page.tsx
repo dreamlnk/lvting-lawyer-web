@@ -7,6 +7,14 @@ import { useRouter } from "next/navigation";
 const STYLES = ["原创写作", "改写", "仿写", "追热点", "问答式", "案例评析", "法规解读"];
 const THEMES = ["经典", "蓝色", "橙色", "灰白"];
 
+function sanitizeHtml(html: string) {
+  return html
+    .replace(/<!DOCTYPE[^>]*>/gi, "")
+    .replace(/<html[^>]*>/gi, "").replace(/<\/html>/gi, "")
+    .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, "")
+    .replace(/<body[^>]*>/gi, "").replace(/<\/body>/gi, "");
+}
+
 export default function AiWriterPage() {
   const router = useRouter();
   const [topic, setTopic] = useState("");
@@ -40,6 +48,13 @@ export default function AiWriterPage() {
   const [articleError, setArticleError] = useState("");
 
   const [publishing, setPublishing] = useState<string | null>(null);
+  const [availableModels, setAvailableModels] = useState<{ id: string; name: string; models: string[] }[]>([]);
+  const [articleModel, setArticleModel] = useState("");
+  const [imageModel, setImageModel] = useState("");
+  const [checkingAI, setCheckingAI] = useState(false);
+  const [checkingPlag, setCheckingPlag] = useState(false);
+  const [titleScores, setTitleScores] = useState<{ score: number; level: string; wordCount: number }[]>([]);
+  const [detection, setDetection] = useState<{ aiScore: number; aiLevel: string; aiDimensions: any[]; aiMarkers: string[]; plagScore: number; plagLevel: string; plagMatches: any[]; wordCount: number }>({ aiScore: 0, aiLevel: "", aiDimensions: [], aiMarkers: [], plagScore: 0, plagLevel: "", plagMatches: [], wordCount: 0 });
   const urlTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -49,6 +64,16 @@ export default function AiWriterPage() {
       setCategories(list);
       const normal = list.filter((c: any) => !["jj","fengcai","shoufeibiaozhun"].includes(c.slug));
       if (normal.length > 0) setSelectedCat(normal[0].id);
+    }).catch(() => {});
+    // 加载可用模型列表
+    fetch("/api/admin/models").then(r => r.json()).then(d => {
+      const list = (d.providers || []).filter((p: any) => p.id !== "custom").map((p: any) => ({ id: p.id, name: p.name, models: p.models }));
+      setAvailableModels(list);
+      if (d.activeProvider) {
+        const cfg = d.configs?.[d.activeProvider];
+        const defModel = cfg?.selectedModel || list.find((p: any) => p.id === d.activeProvider)?.models?.[0] || "";
+        setArticleModel(d.activeProvider + "/" + defModel);
+      }
     }).catch(() => {});
   }, [router]);
 
@@ -91,7 +116,7 @@ export default function AiWriterPage() {
     } catch {}
     setAutoGenerating("正在生成全文...");
     try {
-      const ar = await fetch("/api/ai/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "article", style, theme, topic: t, content: c }) });
+      const ar = await fetch("/api/ai/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "article", style, theme, topic: t, content: c, model: articleModel }) });
       const ad = await ar.json();
       if (ad.ok) setArticleResult(ad.result);
     } catch {}
@@ -131,7 +156,7 @@ export default function AiWriterPage() {
     const sr = type === "title" ? (r: string) => { const ls = r.split("\n").filter(l => l.trim()); setTitleLines(ls); setSelectedTitle(0); } : type === "summary" ? setSummaryResult : setArticleResult;
     sl(true); se(""); type === "title" ? setTitleLines([]) : type === "summary" ? setSummaryResult("") : setArticleResult("");
     try {
-      const res = await fetch("/api/ai/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type, style, theme, topic: topic.trim(), content: content.trim() || undefined }) });
+      const res = await fetch("/api/ai/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type, style, theme, topic: topic.trim(), content: content.trim() || undefined, model: articleModel }) });
       const d = await res.json();
       if (d.ok) sr(d.result); else se(d.error || "生成失败");
     } catch { se("网络错误"); } finally { sl(false); }
@@ -152,13 +177,101 @@ export default function AiWriterPage() {
     } catch { alert("网络错误"); } finally { setPublishing(null); }
   };
 
-  const clearAll = () => { setTopic(""); setContent(""); setUrlInput(""); setKeywordSearch(""); setFetchStatus(""); setSearchResults([]); setAutoGenerating(""); setTitleLines([]); setSelectedTitle(0); setSummaryResult(""); setArticleResult(""); setTitleError(""); setSummaryError(""); setArticleError(""); };
+  const checkAI = async () => {
+    if (!articleResult) return;
+    setCheckingAI(true);
+    try {
+      const res = await fetch("/api/ai/check-originality", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: titleLines[selectedTitle] || "", content: articleResult }),
+      });
+      const d = await res.json();
+      if (d.ok) setDetection(prev => ({
+        ...prev,
+        aiScore: d.aiDetection?.aiScore ?? 0,
+        aiLevel: d.aiDetection?.level ?? "",
+        aiDimensions: d.aiDetection?.dimensions ?? [],
+        aiMarkers: d.aiDetection?.markers ?? [],
+        wordCount: d.wordCount,
+      }));
+    } catch {} finally { setCheckingAI(false); }
+  };
+
+  const checkPlag = async () => {
+    if (!articleResult) return;
+    setCheckingPlag(true);
+    setTitleScores([]);
+    try {
+      // 标题查重
+      if (titleLines.length > 0) {
+        const titleResults = await Promise.all(titleLines.map(async (t) => {
+          try {
+            const r = await fetch("/api/ai/check-originality", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: t, content: "" }) });
+            const d = await r.json();
+            return d.ok ? { score: d.score, level: d.level, wordCount: d.wordCount } : { score: 100, level: "?", wordCount: t.length };
+          } catch { return { score: 100, level: "?", wordCount: t.length }; }
+        }));
+        setTitleScores(titleResults);
+      }
+      // 全文查重
+      const res = await fetch("/api/ai/check-originality", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: titleLines[selectedTitle] || "", content: articleResult }),
+      });
+      const d = await res.json();
+      if (d.ok) setDetection(prev => ({
+        ...prev,
+        plagScore: d.score,
+        plagLevel: d.level,
+        plagMatches: d.contentCheck?.matches ?? [],
+        wordCount: d.wordCount,
+      }));
+    } catch {} finally { setCheckingPlag(false); }
+  };
+
+  const clearAll = () => { setTopic(""); setContent(""); setUrlInput(""); setKeywordSearch(""); setFetchStatus(""); setSearchResults([]); setAutoGenerating(""); setTitleLines([]); setSelectedTitle(0); setSummaryResult(""); setArticleResult(""); setTitleError(""); setSummaryError(""); setArticleError(""); setTitleScores([]); setDetection({ aiScore: 0, aiLevel: "", aiDimensions: [], aiMarkers: [], plagScore: 0, plagLevel: "", plagMatches: [], wordCount: 0 }); setCheckingAI(false); setCheckingPlag(false); };
 
   return (
     <div style={{ maxWidth: 1024, margin: "0 auto", padding: "20px" }}>
-      <div style={{ ...s.card, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ ...s.card, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
         <div><h1 style={s.title}>AI 写作助手</h1><p style={s.desc}>搜索 → 选文章 → 自动抓取 → 自动生成</p></div>
-        <button onClick={clearAll} style={{ padding: "6px 16px", border: "1px solid #ddd", borderRadius: 4, background: "#fff", color: "#999", fontSize: 13, cursor: "pointer" }}>清空</button>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {/* 文章模型 */}
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontSize: 12, color: "#666", whiteSpace: "nowrap" }}>文章模型</span>
+            <select
+              title="选择文章生成模型"
+              value={articleModel}
+              onChange={e => setArticleModel(e.target.value)}
+              style={{ padding: "4px 8px", border: "1px solid #ddd", borderRadius: 4, fontSize: 12, background: "#fff", cursor: "pointer", maxWidth: 200 }}
+            >
+              {availableModels.length === 0 && <option value="">加载中...</option>}
+              {availableModels.map(p => (
+                <optgroup key={p.id} label={p.name}>
+                  {p.models.map(m => <option key={p.id + "/" + m} value={p.id + "/" + m}>{p.name} / {m}</option>)}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+          {/* 图片模型 */}
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontSize: 12, color: "#666", whiteSpace: "nowrap" }}>图片模型</span>
+            <select
+              title="选择图片生成模型"
+              value={imageModel}
+              onChange={e => setImageModel(e.target.value)}
+              style={{ padding: "4px 8px", border: "1px solid #ddd", borderRadius: 4, fontSize: 12, background: "#fff", cursor: "pointer", maxWidth: 160 }}
+            >
+              <option value="">未配置</option>
+              <option value="dall-e-3">DALL·E 3</option>
+              <option value="dall-e-2">DALL·E 2</option>
+              <option value="cogview-3">智谱 CogView-3</option>
+              <option value="cogview-4">智谱 CogView-4</option>
+              <option value="qwen-image">通义万相</option>
+            </select>
+          </div>
+          <button onClick={clearAll} style={{ padding: "6px 16px", border: "1px solid #ddd", borderRadius: 4, background: "#fff", color: "#999", fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" }}>清空</button>
+        </div>
       </div>
 
       <div style={s.card}>
@@ -233,7 +346,12 @@ export default function AiWriterPage() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}><span style={{ fontWeight: 600, fontSize: 15, color: "#3182ce" }}>生成标题</span><button onClick={() => generate("title")} disabled={titleLoading} style={s.gb(titleLoading, "#3182ce")}>{titleLoading ? "生成中..." : "生成"}</button></div>
         {titleError ? <div style={{ color: "#e53e3e", fontSize: 14, padding: 10 }}>{titleError}</div> : titleLines.length > 0 ? titleLines.map((line, i) => (
           <label key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", border: i === selectedTitle ? "2px solid #3182ce" : "1px solid #eee", borderRadius: 6, marginBottom: 6, cursor: "pointer", background: i === selectedTitle ? "#ebf8ff" : "#fafafa" }}>
-            <input type="radio" name="t" checked={i === selectedTitle} onChange={() => setSelectedTitle(i)} style={{ accentColor: "#3182ce" }} /><span style={{ fontSize: 14, color: i === selectedTitle ? "#2b6cb0" : "#333" }}>{line}</span>
+            <input type="radio" name="t" checked={i === selectedTitle} onChange={() => setSelectedTitle(i)} style={{ accentColor: "#3182ce" }} /><span style={{ fontSize: 14, color: i === selectedTitle ? "#2b6cb0" : "#333", flex: 1 }}>{line}</span>
+            {titleScores[i] && (
+              <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 10, background: titleScores[i].score >= 80 ? "#e6f9e6" : titleScores[i].score >= 50 ? "#fff3e0" : "#fde8e8", color: titleScores[i].score >= 80 ? "#2e7d32" : titleScores[i].score >= 50 ? "#e65100" : "#c62828", fontWeight: 500, whiteSpace: "nowrap", flexShrink: 0 }}>
+                {titleScores[i].level === "高" ? "原创" : titleScores[i].level === "中" ? "部分相似" : "低原创"} {titleScores[i].score}% · {titleScores[i].wordCount}字
+              </span>
+            )}
           </label>
         )) : titleLoading ? <div style={{ padding: 20, textAlign: "center", color: "#999" }}>生成中...</div> : <div style={{ padding: 20, textAlign: "center", color: "#ccc" }}>搜索后自动生成...</div>}
       </div>
@@ -243,10 +361,9 @@ export default function AiWriterPage() {
           <span style={{ fontWeight: 600, fontSize: 15, color: "#38a169" }}>生成摘要</span>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={() => generate("summary")} disabled={summaryLoading} style={s.gb(summaryLoading, "#38a169")}>{summaryLoading ? "生成中..." : "生成"}</button>
-            {summaryResult && <><button onClick={() => publishArticle("summary", true)} disabled={publishing === "summary"} style={{ ...s.gb(false, "#d69e2e"), color: "#d69e2e", borderColor: "#d69e2e" }}>存草稿</button><button onClick={() => publishArticle("summary")} disabled={publishing === "summary"} style={{ ...s.gb(false, "#38a169"), background: "#38a169", color: "#fff" }}>发布</button></>}
           </div>
         </div>
-        {summaryError ? <div style={{ color: "#e53e3e", fontSize: 14, padding: 10 }}>{summaryError}</div> : summaryResult ? <div style={s.rb}>{summaryResult}</div> : summaryLoading ? <div style={{ padding: 20, textAlign: "center", color: "#999" }}>生成中...</div> : <div style={{ padding: 20, textAlign: "center", color: "#ccc" }}>搜索后自动生成...</div>}
+        {summaryError ? <div style={{ color: "#e53e3e", fontSize: 14, padding: 10 }}>{summaryError}</div> : summaryResult ? <div className="ai-result-content" style={s.rb}>{summaryResult}</div> : summaryLoading ? <div style={{ padding: 20, textAlign: "center", color: "#999" }}>生成中...</div> : <div style={{ padding: 20, textAlign: "center", color: "#ccc" }}>搜索后自动生成...</div>}
       </div>
 
       <div style={{ ...s.card, borderLeft: "4px solid #d69e2e" }}>
@@ -254,11 +371,101 @@ export default function AiWriterPage() {
           <span style={{ fontWeight: 600, fontSize: 15, color: "#d69e2e" }}>生成全文</span>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={() => generate("article")} disabled={articleLoading} style={s.gb(articleLoading, "#d69e2e")}>{articleLoading ? "生成中..." : "生成"}</button>
-            {articleResult && <><button onClick={() => publishArticle("article", true)} disabled={publishing === "article"} style={{ ...s.gb(false, "#d69e2e"), color: "#d69e2e", borderColor: "#d69e2e" }}>存草稿</button><button onClick={() => publishArticle("article")} disabled={publishing === "article"} style={{ ...s.gb(false, "#38a169"), background: "#38a169", color: "#fff" }}>发布</button></>}
           </div>
         </div>
-        {articleError ? <div style={{ color: "#e53e3e", fontSize: 14, padding: 10 }}>{articleError}</div> : articleResult ? <div style={s.rb} dangerouslySetInnerHTML={{ __html: articleResult }} /> : articleLoading ? <div style={{ padding: 20, textAlign: "center", color: "#999" }}>生成中...</div> : <div style={{ padding: 20, textAlign: "center", color: "#ccc" }}>搜索后自动生成...</div>}
+        {articleError ? <div style={{ color: "#e53e3e", fontSize: 14, padding: 10 }}>{articleError}</div> : articleResult ? <div className="ai-result-content" style={s.rb} dangerouslySetInnerHTML={{ __html: sanitizeHtml(articleResult) }} /> : articleLoading ? <div style={{ padding: 20, textAlign: "center", color: "#999" }}>生成中...</div> : <div style={{ padding: 20, textAlign: "center", color: "#ccc" }}>搜索后自动生成...</div>}
       </div>
+
+      {/* 检测结果 */}
+      <div style={{ ...s.card }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap" }}>
+          {/* AI化程度 */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 13, color: "#555", fontWeight: 500 }}>AI化程度</span>
+            <span style={{ fontSize: 18, fontWeight: 700, color: detection.aiScore <= 50 ? "#2e7d32" : detection.aiScore <= 80 ? "#e65100" : "#c62828" }}>{detection.aiScore}%</span>
+            {detection.aiScore > 0 && (
+              <span style={{ fontSize: 11, padding: "1px 6px", borderRadius: 8, background: detection.aiScore <= 50 ? "#e6f9e6" : detection.aiScore <= 80 ? "#fff3e0" : "#fde8e8", color: detection.aiScore <= 50 ? "#2e7d32" : detection.aiScore <= 80 ? "#e65100" : "#c62828" }}>{detection.aiScore <= 50 ? "偏人工" : detection.aiScore <= 80 ? "偏AI" : "AI感强"}</span>
+            )}
+            <button onClick={checkAI} disabled={checkingAI || !articleResult}
+              style={{ fontSize: 11, color: checkingAI ? "#bbb" : "#805ad5", background: "#f5f5f5", border: "none", padding: "2px 6px", borderRadius: 4, cursor: checkingAI ? "wait" : "pointer", fontWeight: 500 }}>
+              {checkingAI ? "⏳" : "AI检测"}
+            </button>
+          </div>
+
+          <div style={{ width: 1, height: 20, background: "#eee", flexShrink: 0 }} />
+
+          {/* 重复度 */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 13, color: "#555", fontWeight: 500 }}>重复度</span>
+            <span style={{ fontSize: 18, fontWeight: 700, color: detection.plagScore >= 80 ? "#2e7d32" : detection.plagScore >= 50 ? "#e65100" : detection.plagScore === 0 ? "#999" : "#c62828" }}>{detection.plagScore > 0 ? 100 - detection.plagScore : 0}%</span>
+            {detection.plagScore > 0 && (
+              <span style={{ fontSize: 11, padding: "1px 6px", borderRadius: 8, background: detection.plagScore >= 80 ? "#e6f9e6" : detection.plagScore >= 50 ? "#fff3e0" : "#fde8e8", color: detection.plagScore >= 80 ? "#2e7d32" : detection.plagScore >= 50 ? "#e65100" : "#c62828" }}>{detection.plagScore >= 80 ? "原创" : detection.plagScore >= 50 ? "部分相似" : "重复较多"}</span>
+            )}
+            <button onClick={checkPlag} disabled={checkingPlag || !articleResult}
+              style={{ fontSize: 11, color: checkingPlag ? "#bbb" : "#805ad5", background: "#f5f5f5", border: "none", padding: "2px 6px", borderRadius: 4, cursor: checkingPlag ? "wait" : "pointer", fontWeight: 500 }}>
+              {checkingPlag ? "⏳" : "查重"}
+            </button>
+          </div>
+
+          <div style={{ width: 1, height: 20, background: "#eee", flexShrink: 0 }} />
+
+          {/* 字数 */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 13, color: "#555", fontWeight: 500 }}>文章字数</span>
+            <span style={{ fontSize: 16, fontWeight: 600, color: "#333" }}>{detection.wordCount || (articleResult ? articleResult.replace(/<[^>]+>/g, "").replace(/\s+/g, "").length : 0)}字</span>
+          </div>
+        </div>
+
+        {/* 展开详情 */}
+        {(detection.aiDimensions.length > 0 || detection.plagMatches.length > 0) && (
+          <div style={{ borderTop: "1px solid #eee", marginTop: 14, paddingTop: 12, display: "grid", gridTemplateColumns: detection.aiDimensions.length > 0 ? "1fr 1fr" : "1fr", gap: 16 }}>
+            {detection.aiDimensions.length > 0 && (
+              <div>
+                <div style={{ fontSize: 12, color: "#888", marginBottom: 6, fontWeight: 500 }}>AI 检测维度</div>
+                {detection.aiDimensions.map((d: any, i: number) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: 12, color: "#555", width: 70, flexShrink: 0 }}>{d.name}</span>
+                    <div style={{ flex: 1, height: 4, background: "#eee", borderRadius: 2 }}>
+                      <div style={{ height: "100%", width: `${d.score}%`, background: d.score >= 70 ? "#2e7d32" : d.score >= 40 ? "#e65100" : "#c62828", borderRadius: 2 }} />
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: d.score >= 70 ? "#2e7d32" : d.score >= 40 ? "#e65100" : "#c62828", width: 28, textAlign: "right" }}>{d.score}</span>
+                  </div>
+                ))}
+                {detection.aiMarkers.length > 0 && (
+                  <div style={{ fontSize: 11, color: "#c62828", marginTop: 6 }}>特征词：{detection.aiMarkers.join("、")}</div>
+                )}
+              </div>
+            )}
+            {detection.plagMatches.length > 0 && (
+              <div>
+                <div style={{ fontSize: 12, color: "#888", marginBottom: 6, fontWeight: 500 }}>相似段落</div>
+                {detection.plagMatches.map((m: any, j: number) => (
+                  <div key={j} style={{ marginBottom: 4, fontSize: 12 }}>
+                    <div style={{ color: "#c62828", marginBottom: 1 }}>「{m.sentence}」</div>
+                    <a href={m.url} target="_blank" rel="noreferrer" style={{ color: "#3182ce", fontSize: 11 }}>{m.sourceTitle}</a>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 底部操作栏 */}
+      {(() => { const hasContent = !!articleResult; return (
+        <div style={{ ...s.card, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", gap: 10, opacity: hasContent ? 1 : 0.45 }}>
+            <button onClick={() => publishArticle("article", true)} disabled={!hasContent || publishing === "article"}
+              style={{ ...s.gb(!hasContent, "#d69e2e"), color: hasContent ? "#d69e2e" : "#aaa", borderColor: hasContent ? "#d69e2e" : "#ddd", cursor: hasContent ? "pointer" : "not-allowed" }}>
+              {publishing === "article" ? "保存中..." : "存草稿"}
+            </button>
+            <button onClick={() => publishArticle("article")} disabled={!hasContent || publishing === "article"}
+              style={{ ...s.gb(!hasContent, "#38a169"), background: hasContent ? "#38a169" : "#ddd", color: hasContent ? "#fff" : "#aaa", borderColor: hasContent ? "#38a169" : "#ddd", cursor: hasContent ? "pointer" : "not-allowed" }}>
+              {publishing === "article" ? "发布中..." : "发布"}
+            </button>
+          </div>
+        </div>
+      ); })()}
     </div>
   );
 }
@@ -270,6 +477,6 @@ const s: Record<string, any> = {
   input: { width: "100%", padding: "9px 12px", border: "1px solid #ddd", borderRadius: 4, fontSize: 14, boxSizing: "border-box" as const },
   select: { width: "100%", padding: "9px 12px", border: "1px solid #ddd", borderRadius: 4, fontSize: 14, background: "#fff", cursor: "pointer" as const },
   textarea: { width: "100%", padding: "9px 12px", border: "1px solid #ddd", borderRadius: 4, fontSize: 14, resize: "vertical" as const, fontFamily: "inherit" },
-  rb: { background: "#f9f9f9", borderRadius: 6, padding: 16, maxHeight: 400, overflow: "auto", fontSize: 14, lineHeight: 1.8 },
+  rb: { background: "#f9f9f9", borderRadius: 6, padding: 16, maxHeight: 400, overflow: "auto", fontSize: 14, lineHeight: 1.8, overflowWrap: "break-word" as const, wordBreak: "break-word" as const },
   gb: (l: boolean, c: string) => ({ padding: "7px 18px", border: `1px solid ${c}`, borderRadius: 6, background: l ? "#f0f0f0" : "#fff", color: l ? "#999" : c, fontSize: 13, cursor: l ? "wait" : "pointer" as const, fontWeight: 500 }),
 };
