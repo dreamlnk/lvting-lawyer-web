@@ -45,8 +45,8 @@ export function getModelConfig(modelOverride?: string): ModelConfig | null {
     }
   } catch {}
 
-  // 兜底：用 .env 中的 DEEPSEEK_API_KEY（仅当未指定其他模型时）
-  if (!targetProvider && process.env.DEEPSEEK_API_KEY) {
+  // 兜底：用 .env 中的 DEEPSEEK_API_KEY（仅当目标与 deepseek 兼容时）
+  if (process.env.DEEPSEEK_API_KEY && (!targetProvider || targetProvider === "deepseek")) {
     return {
       apiKey: process.env.DEEPSEEK_API_KEY,
       apiBase: "https://api.deepseek.com/v1/chat/completions",

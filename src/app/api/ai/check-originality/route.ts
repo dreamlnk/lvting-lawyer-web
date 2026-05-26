@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getModelConfig } from "@/lib/model-config";
 
+const PARAMS_SETS = [
+  "form=ANNTH1&pc=CNNDDB",
+  "form=ANNTA1&pc=PCMEDGEDP",
+];
+
 function stripHtml(html: string) {
   return html.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#\d+;/g, "").trim();
@@ -41,11 +46,12 @@ async function searchBing(query: string): Promise<{ title: string; url: string; 
   const results: { title: string; url: string; snippet: string }[] = [];
   try {
     const res = await fetch(
-      `https://cn.bing.com/search?q=${encodeURIComponent(query)}`,
+      `https://www.bing.com/search?q=${encodeURIComponent(query)}&${PARAMS_SETS[0]}&setmkt=zh-CN&cc=cn`,
       {
         headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
           "Accept-Language": "zh-CN,zh;q=0.9",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         },
         signal: AbortSignal.timeout(8000),
       }
@@ -79,7 +85,6 @@ async function detectAI(text: string): Promise<{
   const cfg = getModelConfig();
   if (!cfg) return null;
 
-  // 截取前2000字，节省token
   const sample = text.substring(0, 2000);
 
   const prompt = `分析以下文章是AI生成还是真人写作的。评估AI化程度，5个维度，每个维度0-100分（分数越高越像AI）。
@@ -114,7 +119,6 @@ level: "人工"|"偏人工"|"偏AI"|"AI"
     if (!res.ok) return null;
     const data = await res.json();
     const text = data.choices?.[0]?.message?.content || "";
-    // 提取JSON
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return null;
     return JSON.parse(jsonMatch[0]);
@@ -133,7 +137,6 @@ export async function POST(req: NextRequest) {
     const plainContent = content ? stripHtml(content) : "";
     const wordCount = countWords(plainContent);
 
-    // 标题查重
     const titleMatches: { title: string; url: string; similarity: number }[] = [];
     if (title?.trim()) {
       const results = await searchBing(`"${title.trim()}"`);
@@ -145,7 +148,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 内容抽样查重
     const contentMatches: { sentence: string; sourceTitle: string; url: string }[] = [];
     let totalSentences = 0;
     if (plainContent) {
@@ -167,7 +169,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 综合查重评分
     let score = 100;
     const exactTitleMatch = titleMatches.some(m => m.similarity >= 90);
     const similarTitleMatch = titleMatches.some(m => m.similarity >= 50 && m.similarity < 90);
@@ -179,7 +180,6 @@ export async function POST(req: NextRequest) {
     score = Math.max(0, Math.min(100, score));
     const level = score >= 80 ? "高" : score >= 50 ? "中" : "低";
 
-    // AI检测（有内容时才做，和查重并行）
     const aiDetection = plainContent ? await detectAI(plainContent) : null;
 
     return NextResponse.json({
