@@ -64,6 +64,10 @@ export async function PUT(
     if (body.isTop !== undefined)       input.isTop = body.isTop;
     if (body.status !== undefined)      input.status = body.status;
     if (body.publishedAt !== undefined) input.publishedAt = body.publishedAt ? new Date(body.publishedAt) : new Date();
+    if (body.pubGzh !== undefined) input.pubGzh = body.pubGzh;
+    if (body.pubBjh !== undefined) input.pubBjh = body.pubBjh;
+    if (body.pubTt !== undefined) input.pubTt = body.pubTt;
+    if (body.pubXhs !== undefined) input.pubXhs = body.pubXhs;
 
     await updateArticle(articleId, input);
     return NextResponse.json({ ok: true });

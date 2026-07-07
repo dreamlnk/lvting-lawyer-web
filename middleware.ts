@@ -11,19 +11,31 @@ export default function middleware(request: NextRequest) {
     return redirectResponse;
   }
 
-  // 2. 如果是登录页，不检查认证
+  // 2. admin 页面认证与角色控制
+  const adminCookie = request.cookies.get("admin");
+  let auth: { userId: number; username: string; role: string } | null = null;
+  if (adminCookie?.value) {
+    try { auth = JSON.parse(adminCookie.value); } catch {}
+  }
+
+  // 登录页：已登录则跳转对应首页
   if (pathname === '/admin/login') {
+    if (auth) {
+      const target = auth.role === "admin" ? "/admin" : "/admin/ai-tool";
+      return NextResponse.redirect(new URL(target, request.url));
+    }
     return NextResponse.next();
   }
 
-  // 3. 检查 admin 路由认证
+  // admin 路由：未登录跳登录页
   if (pathname.startsWith('/admin')) {
-    const token = request.cookies.get('admin_token')?.value;
-
-    if (!token) {
-      // 未登录，重定向到登录页
+    if (!auth) {
       const url = new URL('/admin/login', request.url);
       return NextResponse.redirect(url);
+    }
+    // 普通用户只能访问 ai-tool
+    if (auth.role === "user" && !pathname.startsWith('/admin/ai-tool')) {
+      return NextResponse.redirect(new URL('/admin/ai-tool', request.url));
     }
   }
 

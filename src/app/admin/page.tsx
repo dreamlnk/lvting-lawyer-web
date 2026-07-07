@@ -20,6 +20,8 @@ export default function AdminPage() {
     try {
       const res = await fetch("/api/admin/check");
       if (!res.ok) { window.location.href = "/admin/login"; return; }
+      const data = await res.json();
+      if (data.role !== "admin") { window.location.href = "/admin/ai-tool"; return; }
       const [ar, cr] = await Promise.all([
         fetch("/api/articles?page=1&pageSize=5"),
         fetch("/api/categories"),

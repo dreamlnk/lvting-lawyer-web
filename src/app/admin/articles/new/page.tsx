@@ -86,21 +86,10 @@ export default function NewArticlePage() {
 
     setSaving(true);
     try {
-      let finalSummary = form.summary;
-      if (!finalSummary && form.content) {
-        const plain = form.content.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim();
-        if (plain.length > 10) {
-          try {
-            const sr = await fetch("/api/ai/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "summary", content: plain }) });
-            const sd = await sr.json();
-            if (sd.ok && sd.result) { finalSummary = sd.result; setForm(f => ({ ...f, summary: sd.result })); }
-          } catch {}
-        }
-      }
       const res = await fetch("/api/articles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, summary: finalSummary }),
+        body: JSON.stringify(form),
       });
 
       if (res.ok) {

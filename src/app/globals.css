@@ -38,6 +38,22 @@ body {
   background-color: #1e3a8a;
 }
 
+/* AI 生成内容段落间距（Tailwind reset 清掉了 p/h2 默认 margin） */
+.ai-result-content p {
+  margin-bottom: 1em;
+}
+.ai-result-content h2 {
+  margin-top: 1.5em;
+  margin-bottom: 0.75em;
+}
+.ai-result-content h3 {
+  margin-top: 1.25em;
+  margin-bottom: 0.5em;
+}
+.ai-result-content blockquote {
+  margin: 1em 0;
+}
+
 /* 自定义间距 */
 .mb-custom {
   margin-bottom: 35px;

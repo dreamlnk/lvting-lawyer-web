@@ -4,11 +4,15 @@ import { downloadImagesInHtml } from "@/lib/image-download";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
-  const page = parseInt(searchParams.get("page") || "1");
-  const pageSize = parseInt(searchParams.get("pageSize") || "20");
+
+  const rawPage = searchParams.get("page");
+  const rawLimit = searchParams.get("limit");
+  const page = rawPage ? parseInt(rawPage) : 1;
+  const pageSize = rawLimit ? parseInt(rawLimit) : parseInt(searchParams.get("pageSize") || "20");
   const categoryId = searchParams.get("categoryId");
   const keyword = searchParams.get("keyword") || undefined;
-  const status = searchParams.get("status") || undefined;
+  const rawStatus = searchParams.get("status");
+  const status = (!rawStatus || rawStatus === "all") ? undefined : rawStatus;
 
   try {
     const result = await getArticles({
@@ -28,10 +32,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    console.log("[POST /api/articles] content length:", (body.content || "").length);
-    // 自动下载内容中的外部图片
+    // 本地保存
     const { html: processedContent, images } = await downloadImagesInHtml(body.content || "");
-    console.log("[POST /api/articles] images found:", images.length, "downloaded:", images.filter(i=>i.local).length);
     const input: ArticleInput = {
       title: body.title,
       subtitle: body.ftitle || body.subtitle || null,

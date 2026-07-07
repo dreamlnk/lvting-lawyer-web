@@ -1,6 +1,11 @@
 import initSqlJs, { type Database as SqlJsDatabase, type SqlJsStatic } from "sql.js";
 import fs from "fs";
 import path from "path";
+import { createHash } from "crypto";
+
+export function hashPassword(password: string): string {
+  return createHash("sha256").update(password + "lvting-salt-2026").digest("hex");
+}
 
 // ============ 初始化 ============
 
@@ -72,6 +77,47 @@ function ensureSchema() {
     key TEXT NOT NULL UNIQUE,
     value TEXT NOT NULL
   )`);
+  db.run(`CREATE TABLE IF NOT EXISTS generated_titles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    style TEXT DEFAULT '原创写作',
+    status TEXT DEFAULT 'generated',
+    article_id INTEGER,
+    created_at TEXT DEFAULT (datetime('now'))
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('admin','user')),
+    created_at TEXT DEFAULT (datetime('now'))
+  )`);
+  // 迁移：远程数据库没有 role 列，用 is_admin
+  try {
+    db.exec("SELECT role FROM users LIMIT 1");
+  } catch {
+    db.run("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'");
+    const rows = db.exec("SELECT id, is_admin FROM users");
+    if (rows.length && rows[0].values.length) {
+      for (const v of rows[0].values) {
+        db.run(`UPDATE users SET role=? WHERE id=${v[0]}`, [v[1] === 1 ? "admin" : "user"]);
+      }
+    }
+  }
+  // 迁移：远程数据库用 ai_titles 表名
+  const tables = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='ai_titles'");
+  if (tables.length && tables[0].values.length) {
+    const genExists = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='generated_titles'");
+    if (!genExists.length || !genExists[0].values.length) {
+      db.run("ALTER TABLE ai_titles RENAME TO generated_titles");
+    }
+  }
+  // 确保默认管理员存在
+  const adminRow = db.exec("SELECT id FROM users WHERE username='admin'");
+  if (!adminRow.length || !adminRow[0].values.length) {
+    db.run("INSERT INTO users (username, password_hash, role) VALUES (?,?,?)",
+      ["admin", hashPassword("lvting2024"), "admin"]);
+  }
   _schemaReady = true;
   saveDb();
 }
@@ -414,6 +460,10 @@ export interface ArticleInput {
   isTop?: boolean;
   status?: string;
   publishedAt?: Date | null;
+  pubGzh?: string | null;
+  pubBjh?: string | null;
+  pubTt?: string | null;
+  pubXhs?: string | null;
 }
 
 export async function createArticle(input: ArticleInput): Promise<number> {
@@ -471,6 +521,101 @@ export async function setSiteConfig(key: string, value: string): Promise<void> {
   await getDb();
   _db!.run("INSERT OR REPLACE INTO site_config (key, value) VALUES (?, ?)", [key, value]);
   saveDb();
+}
+
+// ============ 生成标题库 ============
+
+export async function saveTitles(titles: { title: string; style?: string; status?: string }[]): Promise<number[]> {
+  await getDb();
+  const ids: number[] = [];
+  const stmt = _db!.prepare("INSERT INTO generated_titles (title, style, status) VALUES (?, ?, ?)");
+  for (const t of titles) {
+    stmt.run([t.title, t.style || "原创写作", t.status || "generated"]);
+    const row = _db!.exec("SELECT last_insert_rowid()");
+    ids.push(row[0].values[0][0] as number);
+  }
+  stmt.free();
+  saveDb();
+  return ids;
+}
+
+export async function getTitles(opts: { limit?: number; offset?: number } = {}): Promise<{ titles: any[]; total: number }> {
+  await getDb();
+  const limit = opts.limit || 20;
+  const offset = opts.offset || 0;
+  const total = (_db!.exec("SELECT COUNT(*) FROM generated_titles")[0].values[0][0] as number) || 0;
+  const rows = _db!.exec(`SELECT * FROM generated_titles ORDER BY id DESC LIMIT ${limit} OFFSET ${offset}`);
+  const titles = rows[0] ? rows[0].values.map((v: any[]) => ({
+    id: v[0], title: v[1], style: v[2], status: v[3], article_id: v[4], created_at: v[5],
+  })) : [];
+  return { titles, total };
+}
+
+export async function adoptTitle(id: number, articleId: number): Promise<void> {
+  await getDb();
+  _db!.run("UPDATE generated_titles SET status='adopted', article_id=? WHERE id=?", [articleId, id]);
+  saveDb();
+}
+
+export async function deleteTitles(ids: number[]): Promise<void> {
+  if (ids.length === 0) return;
+  await getDb();
+  const placeholders = ids.map(() => "?").join(",");
+  _db!.run(`DELETE FROM generated_titles WHERE id IN (${placeholders})`, ids);
+  saveDb();
+}
+
+export async function countTitles(): Promise<number> {
+  await getDb();
+  return (_db!.exec("SELECT COUNT(*) FROM generated_titles")[0].values[0][0] as number) || 0;
+}
+
+// ============ 用户管理 ============
+
+export async function getUserByUsername(username: string): Promise<DbUser | null> {
+  await getDb();
+  const rows = _db!.exec(`SELECT id, username, password_hash, role, created_at FROM users WHERE username='${username.replace(/'/g, "''")}'`);
+  if (!rows.length || !rows[0].values.length) return null;
+  const v = rows[0].values[0] as any[];
+  return { id: v[0], username: v[1], password_hash: v[2], role: v[3], created_at: v[4] };
+}
+
+export async function getUserById(id: number): Promise<DbUser | null> {
+  await getDb();
+  const rows = _db!.exec(`SELECT id, username, password_hash, role, created_at FROM users WHERE id=${id}`);
+  if (!rows.length || !rows[0].values.length) return null;
+  const v = rows[0].values[0] as any[];
+  return { id: v[0], username: v[1], password_hash: v[2], role: v[3], created_at: v[4] };
+}
+
+export async function getAllUsers(): Promise<DbUser[]> {
+  await getDb();
+  const rows = _db!.exec("SELECT id, username, role, created_at FROM users ORDER BY id");
+  if (!rows.length) return [];
+  return rows[0].values.map((v: any[]) => ({ id: v[0], username: v[1], role: v[2], created_at: v[3] }));
+}
+
+export async function createUser(username: string, password: string, role: string): Promise<number> {
+  await getDb();
+  const h = hashPassword(password);
+  _db!.run("INSERT INTO users (username, password_hash, role) VALUES (?,?,?)", [username, h, role]);
+  const row = _db!.exec("SELECT last_insert_rowid()");
+  saveDb();
+  return row[0].values[0][0] as number;
+}
+
+export async function deleteUser(id: number): Promise<void> {
+  await getDb();
+  _db!.run("DELETE FROM users WHERE id=?", [id]);
+  saveDb();
+}
+
+export interface DbUser {
+  id: number;
+  username: string;
+  password_hash?: string;
+  role: string;
+  created_at?: string;
 }
 
 // ============ 兼容旧 API ============

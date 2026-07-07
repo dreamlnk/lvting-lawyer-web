@@ -303,7 +303,8 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (res.ok && data.ok) {
-        router.push("/admin");
+        const target = data.user?.role === "admin" ? "/admin" : "/admin/ai-tool";
+        router.push(target);
         router.refresh();
       } else {
         setError(data.error || "登录失败");
@@ -368,7 +369,7 @@ export default function LoginPage() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  container: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f5f5" },
+  container: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#1a1a2e" },
   card: { background: "white", padding: "40px", borderRadius: "8px", boxShadow: "0 2px 10px rgba(0,0,0,0.1)", width: "100%", maxWidth: "420px" },
   title: { textAlign: "center", marginBottom: "10px", color: "#333", fontSize: "24px" },
   path: { textAlign: "center", fontSize: "12px", color: "#999", marginBottom: "30px", fontFamily: "monospace" },

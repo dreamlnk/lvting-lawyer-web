@@ -12,7 +12,20 @@ export function middleware(req: NextRequest) {
 
     if (isWrite) {
       const admin = req.cookies.get("admin");
-      if (admin?.value !== "1") {
+      if (!admin?.value) {
+        return NextResponse.json({ error: "未授权" }, { status: 401 });
+      }
+      try {
+        const data = JSON.parse(admin.value);
+        if (!data.userId || !data.role) throw new Error();
+        // 普通用户只允许 /api/ai/* /api/prompts/* /api/config
+        if (data.role === "user") {
+          const allowed = pathname.startsWith("/api/ai/") || pathname.startsWith("/api/prompts/") || pathname.startsWith("/api/config");
+          if (!allowed) {
+            return NextResponse.json({ error: "无权限" }, { status: 403 });
+          }
+        }
+      } catch {
         return NextResponse.json({ error: "未授权" }, { status: 401 });
       }
     }

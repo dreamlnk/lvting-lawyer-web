@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  trailingSlash: true,
+  trailingSlash: false,
   // sql.js 使用 UMD 格式，与 webpack 冲突，需要排除打包
   serverExternalPackages: ['sql.js', 'mysql2'],
   async rewrites() {

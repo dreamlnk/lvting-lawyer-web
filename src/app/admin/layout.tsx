@@ -5,15 +5,27 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import "./admin-layout.css";
 
-const menu = [
-  { href: "/admin",          label: "仪表盘",   icon: "📊" },
-  { href: "/admin/articles",  label: "文章管理", icon: "📝" },
-  { href: "/admin/categories", label: "栏目管理", icon: "📁" },
-  { href: "/admin/ai-writer", label: "AI 写作",   icon: "🤖" },
-  { href: "/admin/ai-settings", label: "AI 设置",   icon: "⚙️" },
-  { href: "/admin/site",      label: "独立页管理", icon: "📄" },
-  { href: "/",                label: "查看网站", icon: "📰", external: true },
+const allMenu = [
+  { href: "/admin",          label: "仪表盘",   icon: "📊", roles: ["admin"] },
+  { href: "/admin/articles",  label: "文章管理", icon: "📝", roles: ["admin"] },
+  { href: "/admin/categories", label: "栏目管理", icon: "📁", roles: ["admin"] },
+  { href: "/admin/ai-writer", label: "AI 写作",   icon: "🤖", roles: ["admin"] },
+  { href: "/admin/ai-settings", label: "AI 设置",   icon: "⚙️", roles: ["admin"] },
+  { href: "/admin/ai-tool",  label: "发布工具", icon: "📡", roles: ["admin", "user"] },
+  { href: "/admin/users",    label: "用户管理", icon: "👥", roles: ["admin"] },
+  { href: "/admin/site",      label: "独立页管理", icon: "📄", roles: ["admin"] },
+  { href: "/",                label: "查看网站", icon: "📰", external: true, roles: ["admin", "user"] },
 ];
+
+function useUserRole(): string | null {
+  const [role, setRole] = useState<string | null>(null);
+  useEffect(() => {
+    fetch("/api/admin/check").then(r => r.ok ? r.json() : null).then(d => {
+      if (d?.loggedIn) setRole(d.role);
+    }).catch(() => {});
+  }, []);
+  return role;
+}
 
 interface Category { id: number; name: string; slug: string; article_count?: number; }
 
@@ -34,6 +46,8 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const userRole = useUserRole();
+  const menu = allMenu.filter(item => !userRole || item.roles.includes(userRole));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isArticlesPage = mounted && pathname?.startsWith("/admin/articles") && pathname !== "/admin/articles/new";
 
@@ -45,6 +59,11 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   }, [isArticlesPage]);
 
   const closeMobile = () => setMobileMenuOpen(false);
+  const isLoginPage = pathname === "/admin/login";
+  const isUserOnly = userRole === "user";
+
+  // 登录页、普通用户 — 极简无侧边栏
+  if (isLoginPage || isUserOnly) return <>{children}</>;
 
   return (
     <div className="admin-layout">

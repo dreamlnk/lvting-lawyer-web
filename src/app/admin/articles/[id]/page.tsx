@@ -146,17 +146,6 @@ export default function EditArticlePage() {
     if (!categoryId) { window.alert("请选择栏目"); return; }
     setSaving(true);
     try {
-      let finalSummary = summary || null;
-      if (!finalSummary && content) {
-        const plain = content.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim();
-        if (plain.length > 10) {
-          try {
-            const sr = await fetch("/api/ai/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "summary", content: plain }) });
-            const sd = await sr.json();
-            if (sd.ok && sd.result) { finalSummary = sd.result; setSummary(sd.result); }
-          } catch {}
-        }
-      }
       const res = await fetch(`/api/articles/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -164,7 +153,7 @@ export default function EditArticlePage() {
           title,
           subtitle: subtitle || null,
           content,
-          summary: finalSummary,
+          summary: summary || null,
           categoryId,
           coverImage: coverImage || null,
           author,

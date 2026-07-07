@@ -47,7 +47,6 @@ export default function AiWriterPage() {
   const [articleLoading, setArticleLoading] = useState(false);
   const [articleError, setArticleError] = useState("");
 
-  const [copied, setCopied] = useState(false);
   const [publishing, setPublishing] = useState<string | null>(null);
   const [availableModels, setAvailableModels] = useState<{ id: string; name: string; models: string[] }[]>([]);
   const [articleModel, setArticleModel] = useState("");
@@ -93,10 +92,8 @@ export default function AiWriterPage() {
       const fr = await fetch("/api/ai/fetch-url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) });
       const fd = await fr.json();
       if (!fd.ok) { setAutoGenerating(""); setFetchStatus("❌ 抓取失败: " + (fd.error || "")); return; }
-      // 替换旧的抓取内容，不累积
-      const prev = content.replace(/【以下内容从链接抓取】\n[\s\S]*$/, "").trim();
-      const newBlock = (prev ? prev + "\n\n" : "") + "【以下内容从链接抓取】\n" + fd.content;
-      setContent(newBlock);
+      const prefix = content.trim() ? content + "\n\n" : "";
+      setContent(prefix + "【以下内容从链接抓取】\n" + fd.content);
       setFetchStatus("✅ 已抓取 " + fd.content.length + " 字");
       if (!topic.trim() && fd.title) setTopic(fd.title);
       await genAll(fd.title || "", fd.content);
@@ -232,18 +229,6 @@ export default function AiWriterPage() {
     } catch {} finally { setCheckingPlag(false); }
   };
 
-  const handleCopy = async () => {
-    if (!articleResult) return;
-    try {
-      const plain = articleResult.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
-      await navigator.clipboard.writeText(plain);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      alert("复制失败，请手动复制");
-    }
-  };
-
   const clearAll = () => { setTopic(""); setContent(""); setUrlInput(""); setKeywordSearch(""); setFetchStatus(""); setSearchResults([]); setAutoGenerating(""); setTitleLines([]); setSelectedTitle(0); setSummaryResult(""); setArticleResult(""); setTitleError(""); setSummaryError(""); setArticleError(""); setTitleScores([]); setDetection({ aiScore: 0, aiLevel: "", aiDimensions: [], aiMarkers: [], plagScore: 0, plagLevel: "", plagMatches: [], wordCount: 0 }); setCheckingAI(false); setCheckingPlag(false); };
 
   return (
@@ -338,8 +323,8 @@ export default function AiWriterPage() {
                 const r = await fetch("/api/ai/fetch-url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: u }) });
                 const d = await r.json();
                 if (d.ok) {
-                  const prev = content.replace(/【以下内容从链接抓取】\n[\s\S]*$/, "").trim();
-                  setContent((prev ? prev + "\n\n" : "") + "【以下内容从链接抓取】\n" + d.content);
+                  const p = content.trim() ? content + "\n\n" : "";
+                  setContent(p + "【以下内容从链接抓取】\n" + d.content);
                   if (!topic.trim() && d.title) setTopic(d.title);
                   setFetchStatus("✅ 已抓取 " + d.content.length + " 字");
                   await genAll(d.title || "", d.content);
@@ -429,13 +414,6 @@ export default function AiWriterPage() {
             <span style={{ fontSize: 13, color: "#555", fontWeight: 500 }}>文章字数</span>
             <span style={{ fontSize: 16, fontWeight: 600, color: "#333" }}>{detection.wordCount || (articleResult ? articleResult.replace(/<[^>]+>/g, "").replace(/\s+/g, "").length : 0)}字</span>
           </div>
-
-          <div style={{ width: 1, height: 20, background: "#eee", flexShrink: 0 }} />
-
-          <button onClick={handleCopy} disabled={!articleResult}
-            style={{ fontSize: 12, color: !articleResult ? "#ccc" : copied ? "#38a169" : "#555", background: "#f5f5f5", border: "none", padding: "4px 10px", borderRadius: 4, cursor: !articleResult ? "not-allowed" : "pointer", fontWeight: 500, marginLeft: "auto" }}>
-            {copied ? "已复制" : "复制全文"}
-          </button>
         </div>
 
         {/* 展开详情 */}
